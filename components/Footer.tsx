@@ -45,7 +45,9 @@ const connect = [
 
 export default function Footer() {
   return (
-    <footer className="relative z-10 border-t border-white/10 px-5 py-16">
+    // Dark "ground" panel — the sunrise stays bright in the sky above while
+    // footer text keeps its contrast at the brightest point of the gradient
+    <footer className="relative z-10 border-t border-white/10 bg-gradient-to-b from-[#0b1026]/65 to-[#0b1026]/90 px-5 py-16 backdrop-blur-md">
       <div className="mx-auto grid max-w-6xl gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.4fr]">
         <div>
           <div className="flex items-center gap-2">

@@ -35,7 +35,7 @@ export default function ScrollClock() {
   }, []);
 
   return (
-    <div className="glass fixed bottom-5 right-5 z-50 hidden items-center gap-2.5 rounded-full py-2 pl-3.5 pr-4 sm:flex">
+    <div className="glass-dark fixed bottom-5 right-5 z-50 hidden items-center gap-2.5 rounded-full py-2 pl-3.5 pr-4 sm:flex">
       <span className="relative flex size-1.5">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60 motion-reduce:animate-none" />
         <span className="relative inline-flex size-1.5 rounded-full bg-primary" />

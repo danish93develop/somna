@@ -137,6 +137,18 @@ body {
   -webkit-backdrop-filter: blur(14px);
 }
 
+/* Dark glass — for elements that sit over the bright dusk/sunrise sky */
+.glass-dark {
+  background: linear-gradient(
+    160deg,
+    rgba(10, 13, 32, 0.72),
+    rgba(10, 13, 32, 0.55)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
 /* Subtle film grain over the whole page */
 .grain::after {
   content: "";
