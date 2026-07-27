@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { nightProgress } from "@/lib/night-progress";
 
 // The page is one night: 9:00 PM at the top, 7:00 AM at the bottom.
 const NIGHT_MINUTES = 10 * 60;
@@ -20,9 +21,7 @@ export default function ScrollClock() {
   useEffect(() => {
     let raf = 0;
     const tick = () => {
-      const doc = document.documentElement;
-      const max = Math.max(1, doc.scrollHeight - window.innerHeight);
-      const p = Math.min(1, Math.max(0, window.scrollY / max));
+      const p = nightProgress(window.scrollY);
       const mins = Math.round(p * NIGHT_MINUTES);
       const total = (21 * 60 + mins) % (24 * 60);
       const hh = String(Math.floor(total / 60)).padStart(2, "0");
@@ -38,7 +37,7 @@ export default function ScrollClock() {
   return (
     <div className="glass fixed bottom-5 right-5 z-50 hidden items-center gap-2.5 rounded-full py-2 pl-3.5 pr-4 sm:flex">
       <span className="relative flex size-1.5">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60 motion-reduce:animate-none" />
         <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
       </span>
       <span className="font-mono text-xs tabular-nums text-foreground/90">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { nightProgress } from "@/lib/night-progress";
 
 type RGB = [number, number, number];
 
@@ -10,7 +11,7 @@ const hex = (h: string): RGB => [
   parseInt(h.slice(5, 7), 16),
 ];
 
-// Sky palette keyframes across the scroll journey: dusk → night → deep night → pre-dawn → sunrise
+// Sky palette keyframes across the night: dusk → nightfall → deep night → pre-dawn → sunrise
 const KEYS = [
   { p: 0.0, top: hex("#241f4e"), mid: hex("#5b3a68"), hor: hex("#e8935f"), glow: 0.9 },
   { p: 0.12, top: hex("#141433"), mid: hex("#2a2454"), hor: hex("#7a4a63"), glow: 0.45 },
@@ -58,6 +59,7 @@ interface Star {
   r: number;
   phase: number;
   speed: number;
+  depth: number;
 }
 
 interface Meteor {
@@ -77,6 +79,10 @@ export default function SkyScape() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
     let w = 0;
     let h = 0;
     let raf = 0;
@@ -85,12 +91,23 @@ export default function SkyScape() {
     let nextMeteorAt = 4000 + Math.random() * 5000;
     let last = performance.now();
 
+    // cursor parallax (lerped so the field drifts, never jumps)
+    const mouse = { x: 0.5, y: 0.5, sx: 0.5, sy: 0.5 };
+    const onMouseMove = (e: MouseEvent) => {
+      mouse.x = e.clientX / Math.max(1, w);
+      mouse.y = e.clientY / Math.max(1, h);
+    };
+    if (!reduceMotion) {
+      window.addEventListener("mousemove", onMouseMove, { passive: true });
+    }
+
     const stars: Star[] = Array.from({ length: 220 }, () => ({
       x: Math.random(),
       y: Math.random() * 0.8,
       r: 0.4 + Math.random() * 1.2,
       phase: Math.random() * Math.PI * 2,
       speed: 0.4 + Math.random() * 1.4,
+      depth: 0.3 + Math.random() * 0.7,
     }));
 
     const resize = () => {
@@ -110,11 +127,15 @@ export default function SkyScape() {
       const dt = now - last;
       last = now;
 
-      const doc = document.documentElement;
-      const max = Math.max(1, doc.scrollHeight - window.innerHeight);
-      const target = Math.min(1, Math.max(0, window.scrollY / max));
-      smoothP += (target - smoothP) * 0.07;
+      const target = nightProgress(window.scrollY);
+      // reduced motion: settle almost instantly instead of drifting
+      smoothP += (target - smoothP) * (reduceMotion ? 0.5 : 0.07);
       const p = smoothP;
+
+      mouse.sx += (mouse.x - mouse.sx) * 0.04;
+      mouse.sy += (mouse.y - mouse.sy) * 0.04;
+      const parX = (mouse.sx - 0.5) * 26;
+      const parY = (mouse.sy - 0.5) * 14;
 
       const sky = sampleSky(p);
       const night = nightAmount(p);
@@ -165,14 +186,22 @@ export default function SkyScape() {
         drawSun(w * 0.72, h * 1.04 - t * h * 0.26, t);
       }
 
-      // --- stars ---
+      // --- stars (with cursor parallax by depth) ---
       if (night > 0.02) {
         for (const s of stars) {
-          const tw = 0.45 + 0.55 * Math.sin(now * 0.001 * s.speed + s.phase);
+          const tw = reduceMotion
+            ? 0.75
+            : 0.45 + 0.55 * Math.sin(now * 0.001 * s.speed + s.phase);
           ctx.globalAlpha = night * tw * 0.9;
           ctx.fillStyle = "#f4f1ea";
           ctx.beginPath();
-          ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
+          ctx.arc(
+            s.x * w - parX * s.depth,
+            s.y * h - parY * s.depth,
+            s.r,
+            0,
+            Math.PI * 2
+          );
           ctx.fill();
         }
         ctx.globalAlpha = 1;
@@ -181,8 +210,8 @@ export default function SkyScape() {
       // --- moon: rises and crosses the sky through the night ---
       if (p > 0.13 && p < 0.9) {
         const mt = (p - 0.13) / 0.77; // 0..1 across the night
-        const mx = w * (0.85 - mt * 0.7);
-        const my = h * (0.5 - Math.sin(mt * Math.PI) * 0.32);
+        const mx = w * (0.85 - mt * 0.7) - parX * 0.4;
+        const my = h * (0.5 - Math.sin(mt * Math.PI) * 0.32) - parY * 0.4;
         const fade = Math.min(1, Math.min(mt / 0.12, (1 - mt) / 0.12));
         const mr = Math.max(20, h * 0.032);
 
@@ -206,36 +235,38 @@ export default function SkyScape() {
       }
 
       // --- occasional shooting star in deep night ---
-      nextMeteorAt -= dt;
-      if (!meteor && nextMeteorAt <= 0 && night > 0.6) {
-        meteor = {
-          x: w * (0.2 + Math.random() * 0.6),
-          y: h * (0.08 + Math.random() * 0.25),
-          vx: -(0.35 + Math.random() * 0.25),
-          vy: 0.16 + Math.random() * 0.12,
-          life: 1,
-        };
-        nextMeteorAt = 5000 + Math.random() * 7000;
-      }
-      if (meteor) {
-        meteor.x += meteor.vx * dt;
-        meteor.y += meteor.vy * dt;
-        meteor.life -= dt / 900;
-        if (meteor.life <= 0) {
-          meteor = null;
-        } else {
-          const m = meteor;
-          const tailX = m.x - m.vx * 220;
-          const tailY = m.y - m.vy * 220;
-          const grad = ctx.createLinearGradient(m.x, m.y, tailX, tailY);
-          grad.addColorStop(0, `rgba(244,241,234,${0.9 * m.life * night})`);
-          grad.addColorStop(1, "rgba(244,241,234,0)");
-          ctx.strokeStyle = grad;
-          ctx.lineWidth = 1.6;
-          ctx.beginPath();
-          ctx.moveTo(m.x, m.y);
-          ctx.lineTo(tailX, tailY);
-          ctx.stroke();
+      if (!reduceMotion) {
+        nextMeteorAt -= dt;
+        if (!meteor && nextMeteorAt <= 0 && night > 0.6) {
+          meteor = {
+            x: w * (0.2 + Math.random() * 0.6),
+            y: h * (0.08 + Math.random() * 0.25),
+            vx: -(0.35 + Math.random() * 0.25),
+            vy: 0.16 + Math.random() * 0.12,
+            life: 1,
+          };
+          nextMeteorAt = 5000 + Math.random() * 7000;
+        }
+        if (meteor) {
+          meteor.x += meteor.vx * dt;
+          meteor.y += meteor.vy * dt;
+          meteor.life -= dt / 900;
+          if (meteor.life <= 0) {
+            meteor = null;
+          } else {
+            const m = meteor;
+            const tailX = m.x - m.vx * 220;
+            const tailY = m.y - m.vy * 220;
+            const grad = ctx.createLinearGradient(m.x, m.y, tailX, tailY);
+            grad.addColorStop(0, `rgba(244,241,234,${0.9 * m.life * night})`);
+            grad.addColorStop(1, "rgba(244,241,234,0)");
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.moveTo(m.x, m.y);
+            ctx.lineTo(tailX, tailY);
+            ctx.stroke();
+          }
         }
       }
 
@@ -246,6 +277,7 @@ export default function SkyScape() {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMouseMove);
     };
   }, []);
 

@@ -1,22 +1,85 @@
 "use client";
 
+import { useRef } from "react";
 import { motion } from "motion/react";
 import { ArrowDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 function HaloDevice() {
+  const tiltRef = useRef<HTMLDivElement>(null);
+
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = tiltRef.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    el.style.setProperty("--rx", `${(-y * 9).toFixed(2)}deg`);
+    el.style.setProperty("--ry", `${(x * 11).toFixed(2)}deg`);
+    el.style.setProperty("--gx", `${(34 + x * 22).toFixed(1)}%`);
+    el.style.setProperty("--gy", `${(30 + y * 22).toFixed(1)}%`);
+  };
+
+  const onLeave = () => {
+    const el = tiltRef.current;
+    if (!el) return;
+    el.style.setProperty("--rx", "0deg");
+    el.style.setProperty("--ry", "0deg");
+    el.style.setProperty("--gx", "34%");
+    el.style.setProperty("--gy", "30%");
+  };
+
   return (
-    <div className="relative mx-auto flex h-72 w-72 items-center justify-center sm:h-88 sm:w-88">
+    <div
+      ref={tiltRef}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      className="relative mx-auto flex h-72 w-72 items-center justify-center sm:h-88 sm:w-88"
+      style={{ perspective: "900px" }}
+    >
       {/* ambient glow */}
       <div className="absolute inset-0 animate-breathe rounded-full bg-[radial-gradient(circle,rgba(247,232,201,0.28),transparent_65%)]" />
-      {/* the orb */}
-      <div className="animate-float relative size-48 rounded-full sm:size-60">
-        <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_32%_28%,#fdf6e3_0%,#e8d9b8_28%,#8d7f9e_62%,#2c2750_100%)] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6),0_0_60px_-10px_rgba(247,232,201,0.35)]" />
-        <div className="absolute inset-[7%] rounded-full bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.5),transparent_45%)]" />
-        {/* breathing light ring */}
-        <div className="absolute inset-x-[22%] bottom-[16%] h-1.5 animate-breathe rounded-full bg-primary/90 blur-[2px]" />
+
+      {/* tilt frame (cursor-reactive), float rides inside it */}
+      <div
+        className="relative transition-transform duration-200 ease-out"
+        style={{
+          transform: "rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))",
+          transformStyle: "preserve-3d",
+        }}
+      >
+        <div className="animate-float relative size-48 rounded-full sm:size-60">
+          {/* sphere body — highlight follows the cursor via --gx/--gy */}
+          <div
+            className="absolute inset-0 rounded-full shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6),0_0_60px_-10px_rgba(247,232,201,0.35)]"
+            style={{
+              background:
+                "radial-gradient(circle at var(--gx, 34%) var(--gy, 30%), #fff8e8 0%, #f0e1c0 20%, #b9a3c9 48%, #5d4a86 72%, #241f4e 100%)",
+            }}
+          />
+          {/* glass rim + inner shading */}
+          <div className="absolute inset-0 rounded-full border border-white/25 shadow-[inset_0_-20px_44px_rgba(16,12,44,0.55),inset_0_12px_30px_rgba(255,255,255,0.3)]" />
+          {/* specular highlight */}
+          <div
+            className="absolute size-[38%] rounded-full bg-white/60 blur-md"
+            style={{
+              left: "calc(var(--gx, 34%) - 19%)",
+              top: "calc(var(--gy, 30%) - 22%)",
+            }}
+          />
+          {/* thin reflection streak */}
+          <div className="absolute left-[16%] top-[54%] h-[26%] w-[5%] -rotate-[24deg] rounded-full bg-gradient-to-b from-white/35 to-transparent blur-[3px]" />
+          {/* breathing light ring */}
+          <div className="absolute inset-x-[22%] bottom-[16%] h-1.5 animate-breathe rounded-full bg-primary/90 blur-[2px]" />
+        </div>
+
+        {/* dock base + soft ground shadow */}
+        <div className="absolute -bottom-9 left-1/2 h-2.5 w-28 -translate-x-1/2 rounded-full border border-white/10 bg-white/8 sm:-bottom-10 sm:w-32" />
+        <div className="absolute -bottom-7 left-1/2 h-5 w-40 -translate-x-1/2 rounded-[50%] bg-black/45 blur-lg sm:w-48" />
       </div>
+
       {/* floating stat chips */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}

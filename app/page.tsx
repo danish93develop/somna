@@ -1,6 +1,7 @@
 import SkyScape from "@/components/SkyScape";
 import SmoothScroll from "@/components/SmoothScroll";
 import ScrollClock from "@/components/ScrollClock";
+import MotionProvider from "@/components/MotionProvider";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/sections/Hero";
 import NightIntro from "@/components/sections/NightIntro";
@@ -15,7 +16,7 @@ import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
-    <>
+    <MotionProvider>
       <SmoothScroll />
       <SkyScape />
       <ScrollClock />
@@ -32,6 +33,6 @@ export default function Home() {
         <DawnCta />
       </main>
       <Footer />
-    </>
+    </MotionProvider>
   );
 }

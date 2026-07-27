@@ -5,6 +5,11 @@ import Lenis from "lenis";
 
 export default function SmoothScroll() {
   useEffect(() => {
+    // Respect reduced-motion: native scrolling, no smoothing
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
     const lenis = new Lenis({
       lerp: 0.09,
       anchors: true,
