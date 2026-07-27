@@ -47,7 +47,12 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col grain">{children}</body>
+      {/* suppressHydrationWarning: browser extensions (e.g. Grammarly) inject
+          attributes into <body> before hydration; only this element's
+          attribute mismatches are ignored, children are still validated */}
+      <body className="min-h-full flex flex-col grain" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }
